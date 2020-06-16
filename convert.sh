@@ -110,23 +110,23 @@ function countLeadingSpaces() {
   awk -F'[^ ]' '{print length($1)}' <<< "${1}"
 }
 
-removeLeadingSpaces() {
+function removeLeadingSpaces() {
   echo -e "${1}" | sed -e 's/^[[:space:]]*//'
 }
 
-replaceSpaceWithUnderscore() {
+function replaceSpaceWithUnderscore() {
   echo "${1// /_}"
 }
 
-convertArrayValue() {
+function convertArrayValue() {
   echo -e "${1}" | sed -e 's/^[[:space:]]*\-[[:space:]]*//'
 }
 
-capitalize() {
+function capitalize() {
   echo "${1^^}"
 }
 
-writeValueToNamespace() {
+function writeValueToNamespace() {
   local NAMESPACE_STRING=""
   if (( ${#NAMESPACES[@]} )); then
     for NAMESPACE in "${NAMESPACES[@]}"; do
@@ -145,11 +145,11 @@ writeValueToNamespace() {
   fi
 }
 
-writeValue() {
+function writeValue() {
   if [ -z "${2+x}" ]; then
     echo "${1}" >> "${PATH_TO_ENV_FILE}/.env"
   else
-    echo "${2}=${1}" >> "${PATH_TO_ENV_FILE}/.env"
+    echo "${2}=$(printf "%q" "${1}")" >> "${PATH_TO_ENV_FILE}/.env"
   fi
 }
 
