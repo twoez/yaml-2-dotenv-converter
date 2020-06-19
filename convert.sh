@@ -28,7 +28,7 @@ function typeVariable() {
     elif [[ "${1}" =~ ^[[:space:]]*[^\']+:[[:space:]]*\| ]]; then
       VARIABLE_MULTILINE_LINEBREAK_END=1
       VARIABLE_MULTILINE_OPEN=1
-    elif [[ ! "$(determineLineType "${NEXT_LINE}")" -eq 1 ]] && [[ "${NEXT_LINE}" =~ ^[[:space:]]*- ]]; then
+    elif [[ "${NEXT_LINE}" =~ ^[[:space:]]*- ]]; then
       VARIABLE_ARRAY_OPEN=1
     elif [[ "$(determineLineType "${NEXT_LINE}")" -eq 1 ]] && [[ "${NEXT_LEADINGSPACES}" -lt "${CURRENT_LEADINGSPACES}" ]]; then
       writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
