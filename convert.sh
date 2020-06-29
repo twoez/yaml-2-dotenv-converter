@@ -5,11 +5,11 @@ PATH_TO_YAML_FILE="/path-to-yaml/"
 LINE_INDENTATION=4 # In spaces.
 
 function determineLineType() {
-  if [[ "${1}" =~ ^[[:space:]]*[^\']+: ]]; then
-    # Variable line
-    echo 1
-  elif [[ "${1}" =~ ^[[:space:]]*# ]]; then
+  if [[ "${1}" =~ ^[[:space:]]*# ]]; then
     # Comment line
+    echo 1
+  elif [[ "${1}" =~ ^[[:space:]]*[^\']+: ]]; then
+    # Variable line
     echo 2
   else
     # Value line
@@ -30,7 +30,7 @@ function typeVariable() {
       VARIABLE_MULTILINE_OPEN=1
     elif [[ "${NEXT_LINE}" =~ ^[[:space:]]*- ]]; then
       VARIABLE_ARRAY_OPEN=1
-    elif [[ "$(determineLineType "${NEXT_LINE}")" -eq 1 ]] && [[ "${NEXT_LEADINGSPACES}" -lt "${CURRENT_LEADINGSPACES}" ]]; then
+    elif [[ "$(determineLineType "${NEXT_LINE}")" -eq 2 ]] && [[ "${NEXT_LEADINGSPACES}" -lt "${CURRENT_LEADINGSPACES}" ]]; then
       writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
       resetNamespace "${NEXT_LEADINGSPACES}"
     elif [[ -z "${NEXT_LINE}" ]]; then
@@ -61,7 +61,7 @@ function typeValue() {
   fi
 
   if [[ "${NEXT_LEADINGSPACES}" == "${VARIABLE_LEADING_SPACES}" ||
-    ("${NEXT_LEADINGSPACES}" -lt "${CURRENT_LEADINGSPACES}" && "$(determineLineType "${NEXT_LINE}")" -eq 1) ]]; then
+    ("${NEXT_LEADINGSPACES}" -lt "${CURRENT_LEADINGSPACES}" && "$(determineLineType "${NEXT_LINE}")" -eq 2) ]]; then
     if [[ "${VARIABLE_MULTILINE_OPEN}" -eq 1 ]]; then
       writeValueToNamespace "${VARIABLE_MULTILINE_VALUE}"
     elif [[ "${VARIABLE_ARRAY_OPEN}" -eq 1 ]]; then
@@ -174,12 +174,12 @@ if (( ${#LINES[@]} )); then
     NEXT_LINE="${LINES[$i+1]}"
     NEXT_LEADINGSPACES="$(countLeadingSpaces "${LINES[$i+1]}")"
 
-    if [[ "${CURRENT_LINE_TYPE}" -eq 2 ]]; then
+    if [[ "${CURRENT_LINE_TYPE}" -eq 1 ]]; then
       typeComment "${CURRENT_LINE}"
+    elif [[ "${CURRENT_LINE_TYPE}" -eq 2 ]]; then
+      typeVariable "${CURRENT_LINE}"
     elif [[ "${CURRENT_LINE_TYPE}" -eq 3 ]]; then
       typeValue "${CURRENT_LINE}"
-    elif [[ "${CURRENT_LINE_TYPE}" -eq 1 ]]; then
-      typeVariable "${CURRENT_LINE}"
     fi
   done
 fi
