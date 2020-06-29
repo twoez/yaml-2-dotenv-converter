@@ -30,7 +30,7 @@ function typeVariable() {
       VARIABLE_MULTILINE_OPEN=1
     elif [[ "${NEXT_LINE}" =~ ^[[:space:]]*- ]]; then
       VARIABLE_ARRAY_OPEN=1
-    elif [[ "$(determineLineType "${NEXT_LINE}")" -eq 2 ]] && [[ "${NEXT_LEADINGSPACES}" -lt "${CURRENT_LEADINGSPACES}" ]]; then
+    elif [[ "${NEXT_LEADINGSPACES}" -lt "${CURRENT_LEADINGSPACES}" ]]; then
       writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
       resetNamespace "${NEXT_LEADINGSPACES}"
     elif [[ -z "${NEXT_LINE}" ]]; then
