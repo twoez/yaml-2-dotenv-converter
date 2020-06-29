@@ -1,7 +1,7 @@
 ##!/bin/bash
 
-PATH_TO_ENV_FILE="/path-to-env/"
-PATH_TO_YAML_FILE="/path-to-yaml/"
+PATH_TO_YAML_FILE="${1}"
+PATH_TO_ENV_FILE="${2}"
 LINE_INDENTATION=4 # In spaces.
 
 function determineLineType() {
@@ -147,14 +147,14 @@ function writeValueToNamespace() {
 
 function writeValue() {
   if [ -z "${2+x}" ]; then
-    echo "${1}" >> "${PATH_TO_ENV_FILE}/.env"
+    echo "${1}" >> "${PATH_TO_ENV_FILE}"
   else
-    echo "${2}=$(printf "%q" "${1}")" >> "${PATH_TO_ENV_FILE}/.env"
+    echo "${2}=$(printf "%q" "${1}")" >> "${PATH_TO_ENV_FILE}"
   fi
 }
 
-rm -f  "${PATH_TO_ENV_FILE}/.env"
-mapfile -t LINES < <(yq r --prettyPrint -I"${LINE_INDENTATION}" "${PATH_TO_YAML_FILE}/.env.yml")
+rm -f  "${PATH_TO_ENV_FILE}"
+mapfile -t LINES < <(yq r --prettyPrint -I"${LINE_INDENTATION}" "${PATH_TO_YAML_FILE}")
 
 VARIABLE_ARRAY_OPEN=0
 VARIABLE_ARRAY_VALUE=()
