@@ -23,11 +23,11 @@ function typeVariable() {
 
   if [[ "${NEXT_LEADINGSPACES}" != "${CURRENT_LEADINGSPACES}" ]]; then
     if [[ "${1}" =~ ^[[:space:]]*[^\']+:[[:space:]]*\|- ]]; then
-      VARIABLE_MULTILINE_LINEBREAK_END=0
       VARIABLE_MULTILINE_OPEN=1
-    elif [[ "${1}" =~ ^[[:space:]]*[^\']+:[[:space:]]*\| ]]; then
       VARIABLE_MULTILINE_LINEBREAK_END=1
+    elif [[ "${1}" =~ ^[[:space:]]*[^\']+:[[:space:]]*\| ]]; then
       VARIABLE_MULTILINE_OPEN=1
+      VARIABLE_MULTILINE_LINEBREAK_END=0
     elif [[ "${NEXT_LINE}" =~ ^[[:space:]]*- ]]; then
       VARIABLE_ARRAY_OPEN=1
     elif [[ "${NEXT_LEADINGSPACES}" -lt "${CURRENT_LEADINGSPACES}" ]]; then
