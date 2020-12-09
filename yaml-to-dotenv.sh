@@ -36,8 +36,6 @@ function typeVariable() {
     elif [[ -z "${NEXT_LINE}" ]]; then
       writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
     fi
-
-    VARIABLE_LEADING_SPACES="${CURRENT_LEADINGSPACES}"
   else
     writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
 
@@ -53,15 +51,14 @@ function typeValue() {
   if [[ "${VARIABLE_MULTILINE_OPEN}" -eq 1 ]]; then
     VARIABLE_MULTILINE_VALUE+="$(removeLeadingSpaces "${1}")"
 
-    if [[ "${NEXT_LEADINGSPACES}" != "${VARIABLE_LEADING_SPACES}" ]] || [[ "${VARIABLE_MULTILINE_LINEBREAK_END}" -eq 1 ]]; then
+    if [[ "${NEXT_LEADINGSPACES}" -ge "${CURRENT_LEADINGSPACES}" || "${VARIABLE_MULTILINE_LINEBREAK_END}" -eq 1 ]]; then
       VARIABLE_MULTILINE_VALUE+="\n"
     fi
   elif [[ "${VARIABLE_ARRAY_OPEN}" -eq 1 ]]; then
     VARIABLE_ARRAY_VALUE+=("$(convertArrayValue "${1}")")
   fi
 
-  if [[ "${NEXT_LEADINGSPACES}" == "${VARIABLE_LEADING_SPACES}" ||
-    ("${NEXT_LEADINGSPACES}" -lt "${CURRENT_LEADINGSPACES}" && "$(determineLineType "${NEXT_LINE}")" -eq 2) ]]; then
+  if [[ "${NEXT_LEADINGSPACES}" -lt "${CURRENT_LEADINGSPACES}" ]]; then
     if [[ "${VARIABLE_MULTILINE_OPEN}" -eq 1 ]]; then
       writeValueToNamespace "${VARIABLE_MULTILINE_VALUE}"
     elif [[ "${VARIABLE_ARRAY_OPEN}" -eq 1 ]]; then
@@ -78,7 +75,6 @@ function typeValue() {
     VARIABLE_MULTILINE_OPEN=0
     VARIABLE_MULTILINE_LINEBREAK_END=0
     VARIABLE_MULTILINE_VALUE=""
-    VARIABLE_LEADING_SPACES=0
 
     if [[ "${NEXT_LEADINGSPACES}" -ge "${LINE_INDENTATION}" ]]; then
       resetNamespace "${NEXT_LEADINGSPACES}"
@@ -161,8 +157,6 @@ VARIABLE_ARRAY_VALUE=()
 VARIABLE_MULTILINE_OPEN=0
 VARIABLE_MULTILINE_LINEBREAK_END=0
 VARIABLE_MULTILINE_VALUE=""
-VARIABLE_LEADING_SPACES=0
-VARIABLE_PARENT_NAMESPACE=''
 NEXT_LEADINGSPACES=0
 NAMESPACES=()
 
