@@ -4,12 +4,13 @@ PATH_TO_YAML_FILE="${1}"
 PATH_TO_ENV_FILE="${2}"
 LINE_INDENTATION=2 # In spaces.
 
+# Todo: replace KEY_OPEN with KEY_INLINE_VALUE ?
+
 # Line types:
 # 1 = Comment line. Line that starts with a hashtag.
 # 2 = Key line. Line that starts with value followed by a colon. The key could also contain a value on the same line.
 # 3 = Value line. Any other line that contains a value, but didn't match any of the previous line types..
-function handleLine()
-{
+function handleLine() {
   handleMultiLine
   handleArrayLineType1
   handleArrayLineType2
@@ -18,29 +19,26 @@ function handleLine()
 }
 
 # Handle type ['value 1', 'value 2']
-function handleArrayLineType1()
-{
+function handleArrayLineType1() {
   if [[ -z "${CURRENT_LINE_HANDLED}" || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
 
-  if [[ "${CURRENT_LINE}" =~ ^.*:[[:space:]]*\[ && -z "${KEY_OPEN}" ]]; then
-    IFS=':'; read -r KEY VALUE <<< "${CURRENT_LINE}"
-    NAMESPACES+=("${KEY}")
-    KEY_OPEN=1
-    KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
+  if [[ "$(grep -cP "^.*?:[[:space:]]+\[" <<< "${CURRENT_LINE}")" -gt 0 && -z "${KEY_OPEN}" ]]; then
+#    IFS=':'; read -r KEY VALUE <<< "${CURRENT_LINE}"
+    setKeyValue
     ARRAY_OPEN=1
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
-    ARRAY_INLINE=1
-  elif [[ "${CURRENT_LINE}" =~ ^[[:space:]]*\[ && -n "${KEY_OPEN}" ]]; then
+#    ARRAY_INLINE=1
+  elif [[ "$(grep -cP "^[[:space:]]*\[" <<< "${CURRENT_LINE}")" -gt 0 && -n "${KEY_OPEN}" ]]; then
     ARRAY_OPEN=1
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
   fi
 
   if [[ ARRAY_TYPE_1_OPEN -eq 1 ]]; then
-    if [[ ARRAY_INLINE -eq 1 ]]; then
+    if [[ KEY_OPEN -eq 1 ]]; then
       REPLACED_LINE="$(echo "${CURRENT_LINE}" | perl -pe "s/^.*?[[:space:]]+\[//" | perl -pe "s/\][[:space:]]*$//")"
     else
       REPLACED_LINE="$(echo "${CURRENT_LINE}" | perl -pe "s/^[[:space:]]*\[//" | perl -pe "s/\][[:space:]]*$//" )"
@@ -52,7 +50,7 @@ function handleArrayLineType1()
   fi
 
   # write value to dotenv as soon as we find the end of the array
-  if [[ "${CURRENT_LINE}" =~ \][[:space:]]*$ && ARRAY_TYPE_1_OPEN -eq 1 ]]; then
+  if [[ "$(grep -cP "\][[:space:]]*$" <<< "${CURRENT_LINE}")" -gt 0 && ARRAY_TYPE_1_OPEN -eq 1 ]]; then
     if (( ${#ARRAY_VALUE[@]} )); then
       local i
       for (( i = 0; i < ${#ARRAY_VALUE[*]}; ++ i )); do
@@ -65,18 +63,17 @@ function handleArrayLineType1()
   if [[ ARRAY_TYPE_1_OPEN -eq 1 && "${NEXT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" ]]; then
     NAMESPACES=()
 
-    unset KEY_OPEN
+    resetKeyValue
     unset ARRAY_OPEN
     unset ARRAY_TYPE_1_OPEN
     unset ARRAY_VALUE
-    unset ARRAY_INLINE
+#    unset ARRAY_INLINE
   fi
 
   CURRENT_LINE_HANDLED=1
 }
 
-function handleArrayLineType2()
-{
+function handleArrayLineType2() {
   if [[ -z "${CURRENT_LINE_HANDLED}" || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
@@ -86,8 +83,7 @@ function handleArrayLineType2()
   fi
 }
 
-function handleMultiLine()
-{
+function handleMultiLine() {
   if [[ -z "${CURRENT_LINE_HANDLED}" || -n "${ARRAY_OPEN}" ]]; then
     return
   fi
@@ -98,8 +94,7 @@ function handleMultiLine()
   fi
 }
 
-function handleCommentLine()
-{
+function handleCommentLine() {
   if [[ -z "${CURRENT_LINE_HANDLED}" || -n "${ARRAY_OPEN}" || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
@@ -109,8 +104,7 @@ function handleCommentLine()
   fi
 }
 
-function handleKeyLine()
-{
+function handleKeyLine() {
   if [[ -z "${CURRENT_LINE_HANDLED}" || -n "${ARRAY_OPEN}" || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
@@ -159,6 +153,21 @@ function handleKeyLine()
 #  echo ""
 #}
 
+function setKeyValue() {
+  KEY="$(echo "${CURRENT_LINE}" | grep -oP "^.*?:[[:space:]]+" | perl -pe "s/:[[:space:]]$//")"
+  VALUE="$(echo "${CURRENT_LINE}" | grep -oP ":[[:space:]]+.*$" | perl -pe "s/^:[[:space:]]//")"
+  NAMESPACES+=("${KEY}")
+  KEY_OPEN=1
+  KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
+}
+
+function resetKeyValue() {
+  unset KEY
+  unset VALUE
+  unset KEY_OPEN
+  unset KEY_LEADING_SPACES
+}
+
 function countLeadingSpaces() {
   awk -F'[^ ]' '{print length($1)}' <<< "${1}"
 }
@@ -171,9 +180,13 @@ function removeLeadingSpaces() {
   fi
 }
 
-function replaceSpaceWithUnderscore() {
-  echo "${1// /_}"
+function replaceNonAlphanumericWithUnderscore() {
+  echo -e "${1}" | perl -lpe "s/[^a-zA-Z0-9]/_/g"
 }
+
+#function replaceSpaceWithUnderscore() {
+#  echo "${1// /_}"
+#}
 
 function capitalize() {
   echo "${1^^}"
@@ -192,7 +205,7 @@ function resetNamespace() {
 function formatNamespace() {
   local NAMESPACE=""
   NAMESPACE="$(removeLeadingSpaces "${1}")"
-  NAMESPACE="$(replaceSpaceWithUnderscore "${NAMESPACE}")"
+  NAMESPACE="$(replaceNonAlphanumericWithUnderscore "${NAMESPACE}")"
   NAMESPACE="$(capitalize "${NAMESPACE}")"
   echo "${NAMESPACE}"
 }
