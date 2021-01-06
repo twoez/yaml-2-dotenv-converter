@@ -20,7 +20,7 @@ function handleLine() {
 
 # Handle type ['value 1', 'value 2']
 function handleArrayLineType1() {
-  if [[ -z "${CURRENT_LINE_HANDLED}" || -n "${MULTI_LINE_OPEN}" ]]; then
+  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
 
@@ -49,18 +49,28 @@ function handleArrayLineType1() {
     done
   fi
 
-  # write value to dotenv as soon as we find the end of the array
-  if [[ "$(grep -cP "\][[:space:]]*$" <<< "${CURRENT_LINE}")" -gt 0 && ARRAY_TYPE_1_OPEN -eq 1 ]]; then
+#  # write value to dotenv as soon as we find the end of the array
+#  if [[ "$(grep -cP "\][[:space:]]*$" <<< "${CURRENT_LINE}")" -gt 0 && ARRAY_TYPE_1_OPEN -eq 1 ]]; then
+#    if (( ${#ARRAY_VALUE[@]} )); then
+#      local i
+#      for (( i = 0; i < ${#ARRAY_VALUE[*]}; ++ i )); do
+#        writeValueToNamespace "${ARRAY_VALUE[$i]}" "${i}"
+#      done
+#    fi
+#  fi
+
+  # reset variables as soon as we find the next key or end of document has been reached
+  # @todo add end of document check
+  if [[ ARRAY_TYPE_1_OPEN -eq 1 && "${NEXT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" ]]; then
     if (( ${#ARRAY_VALUE[@]} )); then
       local i
       for (( i = 0; i < ${#ARRAY_VALUE[*]}; ++ i )); do
         writeValueToNamespace "${ARRAY_VALUE[$i]}" "${i}"
       done
     fi
-  fi
 
-  # reset variables as soon as we find the next key or end of document has been reached
-  if [[ ARRAY_TYPE_1_OPEN -eq 1 && "${NEXT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" ]]; then
+#    echo "$CURRENT_LINE"
+#    exit
     NAMESPACES=()
 
     resetKeyValue
@@ -74,7 +84,7 @@ function handleArrayLineType1() {
 }
 
 function handleArrayLineType2() {
-  if [[ -z "${CURRENT_LINE_HANDLED}" || -n "${MULTI_LINE_OPEN}" ]]; then
+  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
 
@@ -84,7 +94,7 @@ function handleArrayLineType2() {
 }
 
 function handleMultiLine() {
-  if [[ -z "${CURRENT_LINE_HANDLED}" || -n "${ARRAY_OPEN}" ]]; then
+  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${ARRAY_OPEN}" ]]; then
     return
   fi
 
@@ -95,7 +105,7 @@ function handleMultiLine() {
 }
 
 function handleCommentLine() {
-  if [[ -z "${CURRENT_LINE_HANDLED}" || -n "${ARRAY_OPEN}" || -n "${MULTI_LINE_OPEN}" ]]; then
+  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${ARRAY_OPEN}" || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
 
@@ -105,13 +115,14 @@ function handleCommentLine() {
 }
 
 function handleKeyLine() {
-  if [[ -z "${CURRENT_LINE_HANDLED}" || -n "${ARRAY_OPEN}" || -n "${MULTI_LINE_OPEN}" ]]; then
+  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${ARRAY_OPEN}" || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
 
   if [[ "${CURRENT_LINE}" =~ ^.*: && -z "${KEY_OPEN}" ]]; then
       IFS=':'; read -r KEY VALUE <<< "${CURRENT_LINE}"
-#      echo "${KEY}"
+      echo "${CURRENT_LINE}"
+      exit;
       NAMESPACES+=("${KEY}")
       KEY_OPEN=1
       KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
