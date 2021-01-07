@@ -11,30 +11,31 @@ LINE_INDENTATION=2 # In spaces.
 # 2 = Key line. Line that starts with value followed by a colon. The key could also contain a value on the same line.
 # 3 = Value line. Any other line that contains a value, but didn't match any of the previous line types..
 function handleLine() {
-  handleMultiLine
+#  handleMultiLine
   handleArrayLineType1
-  handleArrayLineType2
+#  handleArrayLineType2
   handleKeyLine
-  handleCommentLine
+#  handleCommentLine
 }
 
-# Handle type ['value 1', 'value 2']
+# Handle arrays with the format: ['value 1', 'value 2']
 function handleArrayLineType1() {
   if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
 
-  if [[ "$(grep -cP "^.*?:[[:space:]]+\[" <<< "${CURRENT_LINE}")" -gt 0 && -z "${KEY_OPEN}" ]]; then
-#    IFS=':'; read -r KEY VALUE <<< "${CURRENT_LINE}"
-    setKeyValue
+  if [[ "$(grep -cP "^.*?:[[:space:]]+\[" <<< "${CURRENT_LINE}")" -gt 0 && KEY_OPEN -eq 0 ]]; then
     ARRAY_OPEN=1
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
 #    ARRAY_INLINE=1
-  elif [[ "$(grep -cP "^[[:space:]]*\[" <<< "${CURRENT_LINE}")" -gt 0 && -n "${KEY_OPEN}" ]]; then
+    setKeyValue
+  elif [[ "$(grep -cP "^[[:space:]]*\[" <<< "${CURRENT_LINE}")" -gt 0 && KEY_OPEN -eq 1 ]]; then
     ARRAY_OPEN=1
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
+  elif [[ ARRAY_TYPE_1_OPEN -eq 0 ]]; then
+    return
   fi
 
   if [[ ARRAY_TYPE_1_OPEN -eq 1 ]]; then
@@ -49,16 +50,6 @@ function handleArrayLineType1() {
     done
   fi
 
-#  # write value to dotenv as soon as we find the end of the array
-#  if [[ "$(grep -cP "\][[:space:]]*$" <<< "${CURRENT_LINE}")" -gt 0 && ARRAY_TYPE_1_OPEN -eq 1 ]]; then
-#    if (( ${#ARRAY_VALUE[@]} )); then
-#      local i
-#      for (( i = 0; i < ${#ARRAY_VALUE[*]}; ++ i )); do
-#        writeValueToNamespace "${ARRAY_VALUE[$i]}" "${i}"
-#      done
-#    fi
-#  fi
-
   # reset variables as soon as we find the next key or end of document has been reached
   # @todo add end of document check
   if [[ ARRAY_TYPE_1_OPEN -eq 1 && "${NEXT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" ]]; then
@@ -69,14 +60,12 @@ function handleArrayLineType1() {
       done
     fi
 
-#    echo "$CURRENT_LINE"
-#    exit
     NAMESPACES=()
 
-    resetKeyValue
     unset ARRAY_OPEN
     unset ARRAY_TYPE_1_OPEN
     unset ARRAY_VALUE
+    resetKeyValue
 #    unset ARRAY_INLINE
   fi
 
@@ -119,22 +108,21 @@ function handleKeyLine() {
     return
   fi
 
-  if [[ "${CURRENT_LINE}" =~ ^.*: && -z "${KEY_OPEN}" ]]; then
-      IFS=':'; read -r KEY VALUE <<< "${CURRENT_LINE}"
+  if [[ "$(grep -cP "^.*?:" <<< "${CURRENT_LINE}")" -gt 0 ]]; then
+    if [[ "${CURRENT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" && -n "${CURRENT_LINE}" ]]; then
       echo "${CURRENT_LINE}"
-      exit;
-      NAMESPACES+=("${KEY}")
-      KEY_OPEN=1
-      KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
-
-  #  elif [[ "${CURRENT_LINE}" =~ ^[[:space:]]*.*: && MULTILINE_OPEN -eq 0 && ARRAY_OPEN -eq 0 && KEY_OPEN -eq 1 && KEY_LEADING_SPACES -lt CURRENT_LEADING_SPACES && -z "${START_CHARACTER}" ]]; then
-  #
-  #    echo "${CURRENT_LINE}"
-  #    KEY_OPEN=0
-  #    exit
-  #  elif [[ KEY_OPEN -eq 1 ]]; then
-  #    echo 3
+      exit
+      writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
+      resetNamespace "${NEXT_LEADING_SPACES}"
+      resetKeyValue
+    else
+      setKeyValue
     fi
+#  elif [[ "${NEXT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" ]]; then
+#    writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
+#    resetNamespace "${NEXT_LEADING_SPACES}"
+#    resetKeyValue
+  fi
 }
 
 #function determineValueType() {
@@ -165,8 +153,10 @@ function handleKeyLine() {
 #}
 
 function setKeyValue() {
-  KEY="$(echo "${CURRENT_LINE}" | grep -oP "^.*?:[[:space:]]+" | perl -pe "s/:[[:space:]]$//")"
+  KEY="$(echo "${CURRENT_LINE}" | grep -oP "^.*?:" | perl -pe "s/:[[:space:]]$//")"
   VALUE="$(echo "${CURRENT_LINE}" | grep -oP ":[[:space:]]+.*$" | perl -pe "s/^:[[:space:]]//")"
+#  KEY="$(echo "${CURRENT_LINE}" | grep -oP "^.*?:[[:space:]]+" | perl -pe "s/:[[:space:]]$//")"
+#  VALUE="$(echo "${CURRENT_LINE}" | grep -oP ":[[:space:]]+.*$" | perl -pe "s/^:[[:space:]]//")"
   NAMESPACES+=("${KEY}")
   KEY_OPEN=1
   KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
