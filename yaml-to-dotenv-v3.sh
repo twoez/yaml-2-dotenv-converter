@@ -111,17 +111,13 @@ function handleKeyLine() {
   if [[ "$(grep -cP "^.*?:" <<< "${CURRENT_LINE}")" -gt 0 ]]; then
     if [[ "${CURRENT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" && -n "${CURRENT_LINE}" ]]; then
       echo "${CURRENT_LINE}"
-      exit
+      echo "${VALUE}"
       writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
-      resetNamespace "${NEXT_LEADING_SPACES}"
+      resetNamespace "${CURRENT_LEADING_SPACES}"
       resetKeyValue
-    else
-      setKeyValue
     fi
-#  elif [[ "${NEXT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" ]]; then
-#    writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
-#    resetNamespace "${NEXT_LEADING_SPACES}"
-#    resetKeyValue
+
+    setKeyValue
   fi
 }
 
