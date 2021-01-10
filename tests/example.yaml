@@ -1,4 +1,8 @@
 inline array type 1 and key with:'"spaces: [ ': [ value ] 1', 'value 2' ]
+key:
+
+  value: 'this is a test'
+  with_empty_value:
 array_type_1:
 
   array:

@@ -24,13 +24,20 @@ function handleArrayLineType1() {
     return
   fi
 
-  if [[ "$(grep -cP "^.*?:[[:space:]]+\[" <<< "${CURRENT_LINE}")" -gt 0 && KEY_OPEN -eq 0 ]]; then
+  if [[ "$(perl -nle 'if (/^.*?:[[:space:]]+\[/) { print $&; exit }' <<< "${CURRENT_LINE}")" && KEY_OPEN -eq 0 ]]; then
+    KEY="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{^.*?:[[:space:]]+}" | perl -pe "s/:[[:space:]]$//")"
+    VALUE="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{:[[:space:]]+.*$}" | perl -pe "s/^:[[:space:]]//")"
+  echo "${KEY}"
+  echo "${VALUE}"
+#  echo "${CURRENT_LINE}"
+  exit
+
     ARRAY_OPEN=1
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
 #    ARRAY_INLINE=1
-    setKeyValue
-  elif [[ "$(grep -cP "^[[:space:]]*\[" <<< "${CURRENT_LINE}")" -gt 0 && KEY_OPEN -eq 1 ]]; then
+#    setKeyValue
+  elif [[ "$(perl -nle'if (/^[[:space:]]*\[/) { print $&; exit }' <<< "${CURRENT_LINE}")" -gt 0 && KEY_OPEN -eq 1 ]]; then
     ARRAY_OPEN=1
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
