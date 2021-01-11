@@ -20,25 +20,28 @@ function handleLine() {
 
 # Handle arrays with the format: ['value 1', 'value 2']
 function handleArrayLineType1() {
-  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${MULTI_LINE_OPEN}" ]]; then
+  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${MULTI_LINE_OPEN}" || -n "${ARRAY_TYPE_2_OPEN}" ]]; then
     return
   fi
 
-  if [[ "$(perl -nle 'if (/^.*?:[[:space:]]+\[/) { print $&; exit }' <<< "${CURRENT_LINE}")" && KEY_OPEN -eq 0 ]]; then
+  if [[ "$(perl -nle 'if (/^.*?:[[:space:]]+\[/) { print $&; exit }' <<< "${CURRENT_LINE}")" && -z "${ARRAY_TYPE_1_OPEN}" ]]; then
     KEY="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{^.*?:[[:space:]]+}" | perl -pe "s/:[[:space:]]$//")"
     VALUE="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{:[[:space:]]+.*$}" | perl -pe "s/^:[[:space:]]//")"
-  echo "${KEY}"
-  echo "${VALUE}"
-#  echo "${CURRENT_LINE}"
-  exit
+    NAMESPACES+=("${KEY}")
+#    KEY_OPEN=1
+    KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
+#  echo "${KEY}"
+#  echo "${VALUE}"
+##  echo "${CURRENT_LINE}"
+#  exit
 
-    ARRAY_OPEN=1
+#    ARRAY_OPEN=1
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
-#    ARRAY_INLINE=1
+    ARRAY_INLINE=1
 #    setKeyValue
-  elif [[ "$(perl -nle'if (/^[[:space:]]*\[/) { print $&; exit }' <<< "${CURRENT_LINE}")" -gt 0 && KEY_OPEN -eq 1 ]]; then
-    ARRAY_OPEN=1
+  elif [[ "$(perl -nle'if (/^[[:space:]]*\[/) { print $&; exit }' <<< "${CURRENT_LINE}")" && -z "${ARRAY_TYPE_1_OPEN}" ]]; then
+#    ARRAY_OPEN=1
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
   elif [[ ARRAY_TYPE_1_OPEN -eq 0 ]]; then
@@ -46,7 +49,7 @@ function handleArrayLineType1() {
   fi
 
   if [[ ARRAY_TYPE_1_OPEN -eq 1 ]]; then
-    if [[ KEY_OPEN -eq 1 ]]; then
+    if [[ ARRAY_INLINE -eq 1 ]]; then
       REPLACED_LINE="$(echo "${CURRENT_LINE}" | perl -pe "s/^.*?[[:space:]]+\[//" | perl -pe "s/\][[:space:]]*$//")"
     else
       REPLACED_LINE="$(echo "${CURRENT_LINE}" | perl -pe "s/^[[:space:]]*\[//" | perl -pe "s/\][[:space:]]*$//" )"
@@ -69,7 +72,7 @@ function handleArrayLineType1() {
 
     NAMESPACES=()
 
-    unset ARRAY_OPEN
+#    unset ARRAY_OPEN
     unset ARRAY_TYPE_1_OPEN
     unset ARRAY_VALUE
     resetKeyValue
@@ -80,7 +83,7 @@ function handleArrayLineType1() {
 }
 
 function handleArrayLineType2() {
-  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${MULTI_LINE_OPEN}" ]]; then
+  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${MULTI_LINE_OPEN}" || -n "${ARRAY_TYPE_1_OPEN}" ]]; then
     return
   fi
 
@@ -90,7 +93,7 @@ function handleArrayLineType2() {
 }
 
 function handleMultiLine() {
-  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${ARRAY_OPEN}" ]]; then
+  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${ARRAY_TYPE_1_OPEN}" || -n "${ARRAY_TYPE_2_OPEN}" ]]; then
     return
   fi
 
@@ -101,7 +104,7 @@ function handleMultiLine() {
 }
 
 function handleCommentLine() {
-  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${ARRAY_OPEN}" || -n "${MULTI_LINE_OPEN}" ]]; then
+  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${ARRAY_TYPE_1_OPEN}" || -n "${ARRAY_TYPE_2_OPEN}" || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
 
@@ -111,20 +114,21 @@ function handleCommentLine() {
 }
 
 function handleKeyLine() {
-  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${ARRAY_OPEN}" || -n "${MULTI_LINE_OPEN}" ]]; then
+  if [[ ${CURRENT_LINE_HANDLED} -eq 1 || -n "${ARRAY_TYPE_1_OPEN}" || -n "${ARRAY_TYPE_2_OPEN}" || -n "${MULTI_LINE_OPEN}" ]]; then
     return
   fi
 
-  if [[ "$(grep -cP "^.*?:" <<< "${CURRENT_LINE}")" -gt 0 ]]; then
-    if [[ "${CURRENT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" && -n "${CURRENT_LINE}" ]]; then
-      echo "${CURRENT_LINE}"
-      echo "${VALUE}"
+  if [[ "$(perl -nle 'if (/^.*?:/) { print $&; exit }' <<< "${CURRENT_LINE}")" ]]; then
+    if [[ -n ${KEY_LEADING_SPACES} && "${CURRENT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" && -n "${CURRENT_LINE}" ]]; then
       writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
       resetNamespace "${CURRENT_LEADING_SPACES}"
       resetKeyValue
     fi
 
-    setKeyValue
+    KEY="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{^.*?:([[:space:]]+)?}" | perl -pe "s/:[[:space:]]$//")"
+    VALUE="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{:[[:space:]]+.*$}" | perl -pe "s/^:[[:space:]]//")"
+    NAMESPACES+=("${KEY}")
+    KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
   fi
 }
 
@@ -155,20 +159,20 @@ function handleKeyLine() {
 #  echo ""
 #}
 
-function setKeyValue() {
-  KEY="$(echo "${CURRENT_LINE}" | grep -oP "^.*?:" | perl -pe "s/:[[:space:]]$//")"
-  VALUE="$(echo "${CURRENT_LINE}" | grep -oP ":[[:space:]]+.*$" | perl -pe "s/^:[[:space:]]//")"
+#function setKeyValue() {
+#  KEY="$(echo "${CURRENT_LINE}" | grep -oP "^.*?:" | perl -pe "s/:[[:space:]]$//")"
+#  VALUE="$(echo "${CURRENT_LINE}" | grep -oP ":[[:space:]]+.*$" | perl -pe "s/^:[[:space:]]//")"
 #  KEY="$(echo "${CURRENT_LINE}" | grep -oP "^.*?:[[:space:]]+" | perl -pe "s/:[[:space:]]$//")"
 #  VALUE="$(echo "${CURRENT_LINE}" | grep -oP ":[[:space:]]+.*$" | perl -pe "s/^:[[:space:]]//")"
-  NAMESPACES+=("${KEY}")
-  KEY_OPEN=1
-  KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
-}
+#  NAMESPACES+=("${KEY}")
+#  KEY_OPEN=1
+#  KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
+#}
 
 function resetKeyValue() {
   unset KEY
   unset VALUE
-  unset KEY_OPEN
+#  unset KEY_OPEN
   unset KEY_LEADING_SPACES
 }
 
