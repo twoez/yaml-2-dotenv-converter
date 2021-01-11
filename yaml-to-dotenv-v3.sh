@@ -4,13 +4,17 @@ PATH_TO_YAML_FILE="${1}"
 PATH_TO_ENV_FILE="${2}"
 LINE_INDENTATION=2 # In spaces.
 
-# Todo: replace KEY_OPEN with KEY_INLINE_VALUE ?
-
 # Line types:
 # 1 = Comment line. Line that starts with a hashtag.
 # 2 = Key line. Line that starts with value followed by a colon. The key could also contain a value on the same line.
 # 3 = Value line. Any other line that contains a value, but didn't match any of the previous line types..
 function handleLine() {
+  if [[ -n ${KEY_LEADING_SPACES} && "${CURRENT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" && -n "${CURRENT_LINE}" ]]; then
+    writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
+    resetNamespace "${CURRENT_LEADING_SPACES}"
+    resetKeyValue
+  fi
+
 #  handleMultiLine
   handleArrayLineType1
 #  handleArrayLineType2
@@ -28,20 +32,12 @@ function handleArrayLineType1() {
     KEY="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{^.*?:[[:space:]]+}" | perl -pe "s/:[[:space:]]$//")"
     VALUE="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{:[[:space:]]+.*$}" | perl -pe "s/^:[[:space:]]//")"
     NAMESPACES+=("${KEY}")
-#    KEY_OPEN=1
     KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
-#  echo "${KEY}"
-#  echo "${VALUE}"
-##  echo "${CURRENT_LINE}"
-#  exit
 
-#    ARRAY_OPEN=1
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
     ARRAY_INLINE=1
-#    setKeyValue
   elif [[ "$(perl -nle'if (/^[[:space:]]*\[/) { print $&; exit }' <<< "${CURRENT_LINE}")" && -z "${ARRAY_TYPE_1_OPEN}" ]]; then
-#    ARRAY_OPEN=1
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
   elif [[ ARRAY_TYPE_1_OPEN -eq 0 ]]; then
@@ -72,11 +68,9 @@ function handleArrayLineType1() {
 
     NAMESPACES=()
 
-#    unset ARRAY_OPEN
     unset ARRAY_TYPE_1_OPEN
     unset ARRAY_VALUE
     resetKeyValue
-#    unset ARRAY_INLINE
   fi
 
   CURRENT_LINE_HANDLED=1
@@ -119,12 +113,6 @@ function handleKeyLine() {
   fi
 
   if [[ "$(perl -nle 'if (/^.*?:/) { print $&; exit }' <<< "${CURRENT_LINE}")" ]]; then
-    if [[ -n ${KEY_LEADING_SPACES} && "${CURRENT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" && -n "${CURRENT_LINE}" ]]; then
-      writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
-      resetNamespace "${CURRENT_LEADING_SPACES}"
-      resetKeyValue
-    fi
-
     KEY="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{^.*?:([[:space:]]+)?}" | perl -pe "s/:[[:space:]]$//")"
     VALUE="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{:[[:space:]]+.*$}" | perl -pe "s/^:[[:space:]]//")"
     NAMESPACES+=("${KEY}")
@@ -132,47 +120,9 @@ function handleKeyLine() {
   fi
 }
 
-#function determineValueType() {
-#  if [[ "${1}" =~ ^[[:space:]]*# ]]; then
-#    echo
-#  fi
-#}
-
-#function determineValueType() {
-#  echo "hi"
-#}
-#
-#function handleKeyLine() {
-#  IFS=':' read -r KEY VALUE <<< "${CURRENT_LINE}"
-##  NAMESPACES+=("${KEY}")
-#  KEY_OPEN=1
-##  echo "${CURRENT_LINE}"
-##  KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
-##  START_CHARACTER=""
-#}
-#
-#function handleValueLine() {
-#  echo ""
-#}
-#
-#function handleCommentLine() {
-#  echo ""
-#}
-
-#function setKeyValue() {
-#  KEY="$(echo "${CURRENT_LINE}" | grep -oP "^.*?:" | perl -pe "s/:[[:space:]]$//")"
-#  VALUE="$(echo "${CURRENT_LINE}" | grep -oP ":[[:space:]]+.*$" | perl -pe "s/^:[[:space:]]//")"
-#  KEY="$(echo "${CURRENT_LINE}" | grep -oP "^.*?:[[:space:]]+" | perl -pe "s/:[[:space:]]$//")"
-#  VALUE="$(echo "${CURRENT_LINE}" | grep -oP ":[[:space:]]+.*$" | perl -pe "s/^:[[:space:]]//")"
-#  NAMESPACES+=("${KEY}")
-#  KEY_OPEN=1
-#  KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
-#}
-
 function resetKeyValue() {
   unset KEY
   unset VALUE
-#  unset KEY_OPEN
   unset KEY_LEADING_SPACES
 }
 
@@ -254,20 +204,10 @@ if (( ${#LINES[@]} )); then
     CURRENT_LINE="${LINES[$i]}"
     CURRENT_LEADING_SPACES="$(countLeadingSpaces "${LINES[$i]}")"
     CURRENT_LINE_HANDLED=0
-#    CURRENT_TYPE="$(determineLineType "${CURRENT_LINE}")"
     NEXT_LINE="${LINES[$i+1]}"
     NEXT_LEADING_SPACES="$(countLeadingSpaces "${LINES[$i+1]}")"
 
-#echo "${CURRENT_TYPE}_${CURRENT_LINE}"
-
     handleLine
-#    if [[ "${CURRENT_TYPE}" -eq 1 ]]; then
-#      handleCommentLine
-#    elif [[ "${CURRENT_TYPE}" -eq 2 ]]; then
-#      handleKeyLine
-#    elif [[ "${CURRENT_TYPE}" -eq 3 ]]; then
-#      handleValueLine
-#    fi
 
     PREVIOUS_LINE="${CURRENT_LINE}"
     PREVIOUS_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
