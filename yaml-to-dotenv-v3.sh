@@ -182,14 +182,14 @@ function countLeadingSpaces() {
 
 function removeLeadingSpaces() {
   if [ -n "${2}" ]; then
-    echo -e "${1}" | perl -pe "s/^[[:space:]]\{${2}\}//"
+    echo "${1}" | perl -pe "s/^[[:space:]]\{${2}\}//"
   else
-    echo -e "${1}" | perl -pe "s/^[[:space:]]*//"
+    echo "${1}" | perl -pe "s/^[[:space:]]*//"
   fi
 }
 
 function replaceNonAlphanumericWithUnderscore() {
-  echo -e "${1}" | perl -lpe "s/[^a-zA-Z0-9]/_/g"
+  echo "${1}" | perl -lpe "s/[^a-zA-Z0-9]/_/g"
 }
 
 #function replaceSpaceWithUnderscore() {
@@ -201,7 +201,7 @@ function capitalize() {
 }
 
 function trim() {
-  echo -e "${1}" | perl -pe 's/^[[:space:]]*//' | perl -pe 's/[[:space:]]*$//'
+  echo "${1}" | perl -pe 's/^[[:space:]]*//' | perl -pe 's/[[:space:]]*$//'
 }
 
 function resetNamespace() {
