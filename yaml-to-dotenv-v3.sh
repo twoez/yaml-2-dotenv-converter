@@ -9,12 +9,6 @@ LINE_INDENTATION=2 # In spaces.
 # 2 = Key line. Line that starts with value followed by a colon. The key could also contain a value on the same line.
 # 3 = Value line. Any other line that contains a value, but didn't match any of the previous line types..
 function handleLine() {
-  if [[ -n ${KEY_LEADING_SPACES} && "${CURRENT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" && -n "${CURRENT_LINE}" ]]; then
-    writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
-    resetNamespace "${CURRENT_LEADING_SPACES}"
-    resetKeyValue
-  fi
-
 #  handleMultiLine
   handleArrayLineType1
 #  handleArrayLineType2
@@ -40,7 +34,9 @@ function handleArrayLineType1() {
   elif [[ "$(perl -nle'if (/^[[:space:]]*\[/) { print $&; exit }' <<< "${CURRENT_LINE}")" && -z "${ARRAY_TYPE_1_OPEN}" ]]; then
     ARRAY_TYPE_1_OPEN=1
     ARRAY_VALUE=()
-  elif [[ ARRAY_TYPE_1_OPEN -eq 0 ]]; then
+  fi
+
+  if [[ ARRAY_TYPE_1_OPEN -eq 0 ]]; then
     return
   fi
 
@@ -113,10 +109,18 @@ function handleKeyLine() {
   fi
 
   if [[ "$(perl -nle 'if (/^.*?:/) { print $&; exit }' <<< "${CURRENT_LINE}")" ]]; then
+    if [[ -n ${KEY_LEADING_SPACES} && "${CURRENT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" && -n "${CURRENT_LINE}" ]]; then
+      writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
+      resetNamespace "${CURRENT_LEADING_SPACES}"
+      resetKeyValue
+    fi
+
     KEY="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{^.*?:([[:space:]]+)?}" | perl -pe "s/:[[:space:]]$//")"
     VALUE="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{:[[:space:]]+.*$}" | perl -pe "s/^:[[:space:]]//")"
     NAMESPACES+=("${KEY}")
     KEY_LEADING_SPACES="${CURRENT_LEADING_SPACES}"
+
+    CURRENT_LINE_HANDLED=1
   fi
 }
 
