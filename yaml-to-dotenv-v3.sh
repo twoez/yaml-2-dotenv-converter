@@ -23,6 +23,12 @@ function handleArrayLineType1() {
   fi
 
   if [[ "$(perl -nle 'if (/^.*?:[[:space:]]+\[/) { print $&; exit }' <<< "${CURRENT_LINE}")" && -z "${ARRAY_TYPE_1_OPEN}" ]]; then
+    if [[ -n ${KEY_LEADING_SPACES} && "${CURRENT_LEADING_SPACES}" -le "${KEY_LEADING_SPACES}" && -n "${CURRENT_LINE}" ]]; then
+      writeValueToNamespace "$(removeLeadingSpaces "${VALUE}")"
+      resetNamespace "${CURRENT_LEADING_SPACES}"
+      resetKeyValue
+    fi
+
     KEY="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{^.*?:[[:space:]]+}" | perl -pe "s/:[[:space:]]$//")"
     VALUE="$(echo "${CURRENT_LINE}" | perl -nle "print $& if m{:[[:space:]]+.*$}" | perl -pe "s/^:[[:space:]]//")"
     NAMESPACES+=("${KEY}")
