@@ -14,7 +14,8 @@ array_type_1:
       ': [value 4'   ]
 
 
-test123: asdds
+test123:
+  asdds
 test: |
   hi
   sentence
@@ -54,7 +55,7 @@ root_#2:
     line 2 # Inline comment.
 
     line 3
-  array: [ 'value 1', 'value 2' ]
+  array: [ 'value 1', 'value 2']
   looks_like_array: "['value 1', 'value
 
-   2']"
+  wat nu: ['test']"
