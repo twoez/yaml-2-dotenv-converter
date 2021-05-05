@@ -130,7 +130,7 @@ function handleValueLine() {
   if [[ -n "${VALUE}" && -n "${CURRENT_LINE}" ]]; then
     VALUE+="\n"
   fi
-  ### HIER GEBLEVEN TOEVOEGEN VALUE_INLINE 
+  ### HIER GEBLEVEN TOEVOEGEN VALUE_INLINE
   VALUE+="$(echo "${CURRENT_LINE}" | perl -pe "s/(^.*?:)?[[:space:]]*//")"
 
 #  if [[ ARRAY_INLINE -eq 1 ]]; then

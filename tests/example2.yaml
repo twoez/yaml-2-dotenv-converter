@@ -1,6 +1,13 @@
+hi :-sdsd:
+
+hi2:
+
+  key: ['item1', 'item2']
+
+
 root:
 
-  looks_like_array: "['va: \"lue 1', 'value
+    looks_like_array: "['va: \"lue 1', 'value
 
-  wat nu: ['test']"
-  another: line
+    wat nu: ['test']"
+    another: line
